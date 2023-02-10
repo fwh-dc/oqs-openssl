@@ -118,7 +118,6 @@ SHLIB_TARGET={- $target{shared_target} -}
 SHLIB_EXT={- $shlibext -}
 SHLIB_EXT_SIMPLE={- $shlibextsimple -}
 SHLIB_EXT_IMPORT={- $shlibextimport -}
-OQSLIBDIR:=$(wildcard $(SRCDIR)/oqs/lib*)
 
 LIBS={- join(" ", map { lib($_) } @{$unified_info{libraries}}) -}
 SHLIBS={- join(" ", map { shlib($_) } @{$unified_info{libraries}}) -}
@@ -614,13 +613,6 @@ install_dev: install_runtime_libs
 		cp $$i "$(DESTDIR)$(INSTALLTOP)/include/openssl/$$fn"; \
 		chmod 644 "$(DESTDIR)$(INSTALLTOP)/include/openssl/$$fn"; \
 	done
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl "$(DESTDIR)$(INSTALLTOP)/include/oqs"
-	@set -e; for i in $(SRCDIR)/oqs/include/oqs/*.h; do \
-		fn=`basename $$i`; \
-		$(ECHO) "install $$i -> $(DESTDIR)$(INSTALLTOP)/include/oqs/$$fn"; \
-		cp $$i "$(DESTDIR)$(INSTALLTOP)/include/oqs/$$fn"; \
-		chmod 644 "$(DESTDIR)$(INSTALLTOP)/include/oqs/$$fn"; \
-	done
 	@$(PERL) $(SRCDIR)/util/mkdir-p.pl "$(DESTDIR)$(libdir)"
 	@set -e; for l in $(INSTALL_LIBS); do \
 		fn=`basename $$l`; \
@@ -779,24 +771,6 @@ install_runtime_libs: build_libs
 		      "$(DESTDIR)$(libdir)/$$fn"; \
 		: {- output_on() if windowsdll(); "" -}; \
 	done
-ifeq (,$(OQSLIBDIR))
-	@$(ECHO) "No OQS library directory found to install. Exiting install with failure."
-	exit 1
-endif
-ifneq (,$(wildcard $(OQSLIBDIR)/liboqs.a))
-	$(ECHO) "install $(OQSLIBDIR)/liboqs.a $(DESTDIR)$(libdir)"; \
-	install $(OQSLIBDIR)/liboqs.a $(DESTDIR)$(libdir)
-endif
-ifneq (,$(wildcard $(OQSLIBDIR)/liboqs.so.0*))
-	@set -e; for i in $(OQSLIBDIR)/liboqs.so.0.*; do \
-		fn=`basename $$i`; \
-		sn=`basename $(OQSLIBDIR)/liboqs.so.?`; \
-		$(ECHO) "install $(OQSLIBDIR)/$$fn $(DESTDIR)$(libdir)"; \
-		$(ECHO) "cd $(DESTDIR)$(libdir) && ln -sf $$fn liboqs.so && ln -sf $$fn $$sn && cd -"; \
-		install $(OQSLIBDIR)/$$fn $(DESTDIR)$(libdir); \
-		cd $(DESTDIR)$(libdir) && ln -sf $$fn liboqs.so && ln -sf $$fn $$sn && cd -; \
-	done
-endif
 
 
 install_programs: install_runtime_libs build_programs
