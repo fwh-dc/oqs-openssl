@@ -51,6 +51,21 @@ const SSL3_ENC_METHOD DTLSv1_2_enc_data = {
     dtls1_handshake_write
 };
 
+const SSL3_ENC_METHOD DTLSv1_3_enc_data = {
+    tls13_setup_key_block,
+    tls13_generate_master_secret,
+    tls13_change_cipher_state,
+    tls13_final_finish_mac,
+    TLS_MD_CLIENT_FINISH_CONST, TLS_MD_CLIENT_FINISH_CONST_SIZE,
+    TLS_MD_SERVER_FINISH_CONST, TLS_MD_SERVER_FINISH_CONST_SIZE,
+    tls13_alert_code,
+    tls13_export_keying_material,
+    SSL_ENC_FLAG_DTLS | SSL_ENC_FLAG_SIGALGS | SSL_ENC_FLAG_SHA256_PRF,
+    dtls1_set_handshake_header,
+    dtls1_close_construct_packet,
+    dtls1_handshake_write
+};
+
 OSSL_TIME dtls1_default_timeout(void)
 {
     /*
@@ -663,6 +678,7 @@ int DTLSv1_listen(SSL *ssl, BIO_ADDR *client)
              * haven't decided which version to use yet send back using version
              * 1.0 header: otherwise some clients will ignore it.
              */
+            //FWH:: needs fixing
             version = (ssl->method->version == DTLS_ANY_VERSION) ? DTLS1_VERSION
                                                                  : s->version;
 
@@ -681,7 +697,7 @@ int DTLSv1_listen(SSL *ssl, BIO_ADDR *client)
                     || !WPACKET_memcpy(&wpkt, seq, SEQ_NUM_SIZE)
                        /* End of record, start sub packet for message */
                     || !WPACKET_start_sub_packet_u16(&wpkt)
-                       /* Message type */
+                       /* Message type FWH:: support hello retry request? */
                     || !WPACKET_put_bytes_u8(&wpkt,
                                              DTLS1_MT_HELLO_VERIFY_REQUEST)
                        /*

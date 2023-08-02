@@ -47,6 +47,9 @@ static const version_test version_testdata[] = {
     {PROTO_TLS,  7,                      42,                     0, 0, 0,                  0},
     {PROTO_DTLS, 0,                      0,                      1, 1, 0,                  0},
     {PROTO_DTLS, DTLS1_VERSION,          DTLS1_2_VERSION,        1, 1, DTLS1_VERSION,      DTLS1_2_VERSION},
+#ifndef OPENSSL_NO_DTLS1_3
+    {PROTO_DTLS, DTLS1_3_VERSION,        DTLS1_3_VERSION,        1, 1, DTLS1_3_VERSION,    DTLS1_3_VERSION},
+#endif
 #ifndef OPENSSL_NO_DTLS1_2
     {PROTO_DTLS, DTLS1_2_VERSION,        DTLS1_2_VERSION,        1, 1, DTLS1_2_VERSION,    DTLS1_2_VERSION},
 #endif

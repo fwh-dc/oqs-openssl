@@ -42,6 +42,15 @@ typedef struct tls_buffer_st {
     int type;
 } TLS_BUFFER;
 
+typedef struct dtls_unified_hdr_st {
+    int valid;
+    uint8_t first_byte;
+    int cbit_is_set; // RFC9147: "The C bit (0x10) is set if the Connection ID is present."
+    int sbit_is_set; // RFC9147: "The S bit (0x08) indicates the size of the sequence number."
+    int lbit_is_set; // RFC9147: "The L bit (0x04) is set if the length is present."
+    uint8_t seq[2];
+} DTLS_UNIFIED_HDR;
+
 typedef struct tls_rl_record_st {
     /* Record layer version */
     /* r */
@@ -76,6 +85,9 @@ typedef struct tls_rl_record_st {
     /* sequence number, needed by DTLS1 */
     /* r */
     unsigned char seq_num[SEQ_NUM_SIZE];
+    /* Unified header, needed by DTLS1.3 */
+    /* r */
+    DTLS_UNIFIED_HDR unified_hdr;
 } TLS_RL_RECORD;
 
 /* Macros/functions provided by the TLS_RL_RECORD component */
@@ -384,6 +396,7 @@ extern struct record_functions_st tls_1_funcs;
 extern struct record_functions_st tls_1_3_funcs;
 extern struct record_functions_st tls_any_funcs;
 extern struct record_functions_st dtls_1_funcs;
+extern struct record_functions_st dtls_1_3_funcs;
 extern struct record_functions_st dtls_any_funcs;
 
 void ossl_rlayer_fatal(OSSL_RECORD_LAYER *rl, int al, int reason,

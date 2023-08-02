@@ -724,7 +724,7 @@ int tls_get_more_records(OSSL_RECORD_LAYER *rl)
     if (num_recs == 1
             && thisrr->type == SSL3_RT_CHANGE_CIPHER_SPEC
                /* The following can happen in tlsany_meth after HRR */
-            && rl->version == TLS1_3_VERSION
+            && (rl->version == TLS1_3_VERSION || rl->version == DTLS1_3_VERSION)
             && rl->is_first_handshake) {
         /*
          * CCS messages must be exactly 1 byte long, containing the value 0x01
@@ -803,7 +803,7 @@ int tls_get_more_records(OSSL_RECORD_LAYER *rl)
     }
 
     ERR_set_mark();
-    enc_err = rl->funcs->cipher(rl, rr, num_recs, 0, macbufs, mac_size);
+    enc_err = rl->funcs->cipher(rl, rr, num_recs, 0, macbufs, mac_size); // FWH: tls13_cipher
 
     /*-
      * enc_err is:
@@ -1699,7 +1699,7 @@ int tls_post_encryption_processing_default(OSSL_RECORD_LAYER *rl,
         rl->msg_callback(1, thiswr->rec_version, SSL3_RT_HEADER, recordstart,
                          headerlen, rl->cbarg);
 
-        if (rl->version == TLS1_3_VERSION && rl->enc_ctx != NULL) {
+        if ((rl->version == TLS1_3_VERSION || rl->version == DTLS1_3_VERSION) && rl->enc_ctx != NULL) {
             unsigned char ctype = thistempl->type;
 
             rl->msg_callback(1, thiswr->rec_version, SSL3_RT_INNER_CONTENT_TYPE,
@@ -1819,7 +1819,7 @@ int tls_write_records_default(OSSL_RECORD_LAYER *rl,
     }
 
     if (prefix) {
-        if (rl->funcs->cipher(rl, wr, 1, 1, NULL, mac_size) < 1) {
+        if (rl->funcs->cipher(rl, wr, 1, 1, NULL, mac_size) < 1) { // FWH: tls13_cipher
             if (rl->alert == SSL_AD_NO_ALERT) {
                 RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
             }
@@ -1827,7 +1827,7 @@ int tls_write_records_default(OSSL_RECORD_LAYER *rl,
         }
     }
 
-    if (rl->funcs->cipher(rl, wr + prefix, numtempl, 1, NULL, mac_size) < 1) {
+    if (rl->funcs->cipher(rl, wr + prefix, numtempl, 1, NULL, mac_size) < 1) { // FWH: tls13_cipher
         if (rl->alert == SSL_AD_NO_ALERT) {
             RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
         }

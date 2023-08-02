@@ -1181,6 +1181,7 @@ static int ssl_security_default_callback(const SSL *s, const SSL_CTX *ctx,
                 return 0;
             /* Level 3: forward secure ciphersuites only */
             pfs_mask = SSL_kDHE | SSL_kECDHE | SSL_kDHEPSK | SSL_kECDHEPSK;
+            //FWH:: what about dtls?
             if (level >= 3 && c->min_tls != TLS1_3_VERSION &&
                                !(c->algorithm_mkey & pfs_mask))
                 return 0;

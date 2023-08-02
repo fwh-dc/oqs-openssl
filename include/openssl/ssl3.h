@@ -140,6 +140,8 @@ extern "C" {
 
 # define SSL3_HM_HEADER_LENGTH                  4
 
+# define DTLS13_UNIFIED_HEADER_MAX_LENGTH        (256+2+2)
+
 # ifndef SSL3_ALIGN_PAYLOAD
  /*
   * Some will argue that this increases memory footprint, but it's not
@@ -220,6 +222,7 @@ extern "C" {
 # define SSL3_RT_ALERT                   21
 # define SSL3_RT_HANDSHAKE               22
 # define SSL3_RT_APPLICATION_DATA        23
+# define SSL3_RT_DTLS_ACK                26 // TODO: add support
 
 /* Pseudo content types to indicate additional parameters */
 # define TLS1_RT_CRYPTO                  0x1000

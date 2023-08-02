@@ -398,7 +398,7 @@ static int state_machine(SSL_CONNECTION *s, int server)
 
         s->server = server;
         if (cb != NULL) {
-            if (SSL_IS_FIRST_HANDSHAKE(s) || !SSL_CONNECTION_IS_TLS13(s))
+            if (SSL_IS_FIRST_HANDSHAKE(s) || !(SSL_CONNECTION_IS_TLS13(s) || SSL_CONNECTION_IS_DTLS13(s)))
                 cb(ssl, SSL_CB_HANDSHAKE_START, 1);
         }
 
@@ -748,8 +748,12 @@ static int statem_do_write(SSL_CONNECTION *s)
 
     if (st->hand_state == TLS_ST_CW_CHANGE
         || st->hand_state == TLS_ST_SW_CHANGE) {
-        if (SSL_CONNECTION_IS_DTLS(s))
-            return dtls1_do_write(s, SSL3_RT_CHANGE_CIPHER_SPEC);
+        if (SSL_CONNECTION_IS_DTLS(s)) {
+            if (!SSL_CONNECTION_IS_DTLS13(s))
+                return dtls1_do_write(s, SSL3_RT_CHANGE_CIPHER_SPEC);
+            else
+                return 1; // FWH: TODO ChangeCipherSpec messages are not supported in DTLS1.3
+        }
         else
             return ssl3_do_write(s, SSL3_RT_CHANGE_CIPHER_SPEC);
     } else {

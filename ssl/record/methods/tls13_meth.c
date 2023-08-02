@@ -60,7 +60,7 @@ static int tls13_cipher(OSSL_RECORD_LAYER *rl, TLS_RL_RECORD *recs,
                         size_t macsize)
 {
     EVP_CIPHER_CTX *ctx;
-    unsigned char iv[EVP_MAX_IV_LENGTH], recheader[SSL3_RT_HEADER_LENGTH];
+    unsigned char iv[EVP_MAX_IV_LENGTH], recheader[DTLS13_UNIFIED_HEADER_MAX_LENGTH];
     size_t ivlen, offset, loop, hdrlen;
     unsigned char *staticiv;
     unsigned char *seq = rl->sequence;
@@ -105,8 +105,9 @@ static int tls13_cipher(OSSL_RECORD_LAYER *rl, TLS_RL_RECORD *recs,
          * Take off tag. There must be at least one byte of content type as
          * well as the tag
          */
-        if (rec->length < rl->taglen + 1)
+        if (rec->length < rl->taglen + 1) {
             return 0;
+        }
         rec->length -= rl->taglen;
     }
 
@@ -121,30 +122,50 @@ static int tls13_cipher(OSSL_RECORD_LAYER *rl, TLS_RL_RECORD *recs,
     for (loop = 0; loop < SEQ_NUM_SIZE; loop++)
         iv[offset + loop] = staticiv[offset + loop] ^ seq[loop];
 
-    if (!tls_increment_sequence_ctr(rl)) {
-        /* RLAYERfatal already called */
-        return 0;
+    if (!rl->isdtls) {
+        if (!tls_increment_sequence_ctr(rl)) {
+            /* RLAYERfatal already called */
+            return 0;
+        }
     }
-
     if (EVP_CipherInit_ex(ctx, NULL, NULL, NULL, iv, sending) <= 0
-            || (!sending && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG,
-                                                rl->taglen,
-                                                rec->data + rec->length) <= 0)) {
+        || (!sending && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG,
+                                            rl->taglen,
+                                            rec->data + rec->length) <= 0)) {
         RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
         return 0;
     }
 
     /* Set up the AAD */
-    if (!WPACKET_init_static_len(&wpkt, recheader, sizeof(recheader), 0)
+    if (rec->unified_hdr.valid) {
+        //DTLS1.3 DTLSCiphertext record
+        if (!WPACKET_init_static_len(&wpkt, recheader, sizeof(recheader), 0)
+            || !WPACKET_put_bytes_u8(&wpkt, rec->unified_hdr.first_byte)
+            // TODO: add support for connection id
+            || !WPACKET_put_bytes_u8(&wpkt, rec->unified_hdr.seq[0])
+            || !(rec->unified_hdr.sbit_is_set ? WPACKET_put_bytes_u8(&wpkt, rec->unified_hdr.seq[1]) : 1)
+            || !(rec->unified_hdr.lbit_is_set ? WPACKET_put_bytes_u16(&wpkt, rec->length) : 1)
+            || !WPACKET_get_total_written(&wpkt, &hdrlen)
+            || hdrlen > DTLS13_UNIFIED_HEADER_MAX_LENGTH
+            || hdrlen < 2
+            || !WPACKET_finish(&wpkt)) {
+            RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            WPACKET_cleanup(&wpkt);
+            return 0;
+        }
+    } else {
+        //TLSCiphertext record
+        if (!WPACKET_init_static_len(&wpkt, recheader, sizeof(recheader), 0)
             || !WPACKET_put_bytes_u8(&wpkt, rec->type)
             || !WPACKET_put_bytes_u16(&wpkt, rec->rec_version)
             || !WPACKET_put_bytes_u16(&wpkt, rec->length + rl->taglen)
             || !WPACKET_get_total_written(&wpkt, &hdrlen)
             || hdrlen != SSL3_RT_HEADER_LENGTH
             || !WPACKET_finish(&wpkt)) {
-        RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
-        WPACKET_cleanup(&wpkt);
-        return 0;
+            RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            WPACKET_cleanup(&wpkt);
+            return 0;
+        }
     }
 
     /*
@@ -154,8 +175,7 @@ static int tls13_cipher(OSSL_RECORD_LAYER *rl, TLS_RL_RECORD *recs,
     if ((mode == EVP_CIPH_CCM_MODE
                  && EVP_CipherUpdate(ctx, NULL, &lenu, NULL,
                                      (unsigned int)rec->length) <= 0)
-            || EVP_CipherUpdate(ctx, NULL, &lenu, recheader,
-                                sizeof(recheader)) <= 0
+            || EVP_CipherUpdate(ctx, NULL, &lenu, recheader,(int)hdrlen) <= 0
             || EVP_CipherUpdate(ctx, rec->data, &lenu, rec->input,
                                 (unsigned int)rec->length) <= 0
             || EVP_CipherFinal_ex(ctx, rec->data + lenu, &lenf) <= 0
@@ -239,6 +259,11 @@ static unsigned int tls13_get_record_type(OSSL_RECORD_LAYER *rl,
     if (rl->allow_plain_alerts && template->type == SSL3_RT_ALERT)
         return  SSL3_RT_ALERT;
 
+    //if (rl->isdtls) {
+    //    /* 0b00101100: Unified header with S and L bits set (TODO: document that this is forced atm) */
+    //    uint8_t unified_hdr_first_byte = (0b00101100 ^ (0x0003 & rl->epoch)) & 0xff;
+    //    return unified_hdr_first_byte;
+    //}
     /*
      * Aside from the above case we always use the application data record type
      * when encrypting in TLSv1.3. The "inner" record type encodes the "real"
@@ -321,5 +346,26 @@ struct record_functions_st tls_1_3_funcs = {
     tls13_add_record_padding,
     tls_prepare_for_encryption_default,
     tls_post_encryption_processing_default,
+    NULL
+};
+
+struct record_functions_st dtls_1_3_funcs = {
+    tls13_set_crypto_state,
+    tls13_cipher,
+    NULL,
+    tls_default_set_protocol_version,
+    tls_default_read_n,
+    dtls_get_more_records, // (TODO) FWH: This function might require TLS 1.3 specific handling
+    NULL,
+    tls13_post_process_record,
+    NULL,
+    tls_write_records_default,
+    tls_allocate_write_buffers_default,
+    tls_initialise_write_packets_default,
+    tls13_get_record_type, // (TODO) FWH: Seems like new stuff for TLS 1.3, check applicability for DTLS 1.3
+    dtls_prepare_record_header,
+    tls13_add_record_padding, // (TODO) FWH: Seems like new stuff for TLS 1.3, check applicability for DTLS 1.3
+    tls_prepare_for_encryption_default,
+    dtls_post_encryption_processing,
     NULL
 };

@@ -189,7 +189,7 @@ static int dtls_process_record(OSSL_RECORD_LAYER *rl, DTLS_BITMAP *bitmap)
      * errors in the queue from processing bogus junk that we ignored.
      */
     ERR_set_mark();
-    enc_err = rl->funcs->cipher(rl, rr, 1, 0, &macbuf, mac_size);
+    enc_err = rl->funcs->cipher(rl, rr, 1, 0, &macbuf, mac_size); // FWH: tls13_cipher
 
     /*-
      * enc_err is:
@@ -383,7 +383,6 @@ int dtls_get_more_records(OSSL_RECORD_LAYER *rl)
     size_t more, n;
     TLS_RL_RECORD *rr;
     unsigned char *p = NULL;
-    unsigned short version;
     DTLS_BITMAP *bitmap;
     unsigned int is_next_epoch;
 
@@ -430,15 +429,12 @@ int dtls_get_more_records(OSSL_RECORD_LAYER *rl)
 
         p = rl->packet;
 
-        if (rl->msg_callback != NULL)
-            rl->msg_callback(0, 0, SSL3_RT_HEADER, p, DTLS1_RT_HEADER_LENGTH,
-                            rl->cbarg);
-
         /* Pull apart the header into the DTLS1_RECORD */
+        // FWH: TODO need to handle variable length header
         rr->type = *(p++);
         ssl_major = *(p++);
         ssl_minor = *(p++);
-        version = (ssl_major << 8) | ssl_minor;
+        rr->rec_version = (ssl_major << 8) | ssl_minor;
 
         /* sequence number is 64 bits, with top 2 bytes = epoch */
         n2s(p, rr->epoch);
@@ -448,12 +444,17 @@ int dtls_get_more_records(OSSL_RECORD_LAYER *rl)
 
         n2s(p, rr->length);
 
+        if (rl->msg_callback != NULL)
+            rl->msg_callback(0, rr->rec_version, SSL3_RT_HEADER, rl->packet, DTLS1_RT_HEADER_LENGTH,
+                             rl->cbarg);
+
         /*
          * Lets check the version. We tolerate alerts that don't have the exact
          * version number (e.g. because of protocol version errors)
          */
-        if (!rl->is_first_record && rr->type != SSL3_RT_ALERT) {
-            if (version != rl->version) {
+        const int dtls13_match = rr->rec_version == DTLS1_2_VERSION && rl->version == DTLS1_3_VERSION;
+        if (!rl->is_first_record && rr->type != SSL3_RT_ALERT && !dtls13_match) {
+            if (rr->rec_version != rl->version) {
                 /* unexpected version, silently discard */
                 rr->length = 0;
                 rl->packet_length = 0;
@@ -569,6 +570,11 @@ int dtls_get_more_records(OSSL_RECORD_LAYER *rl)
         goto again;             /* get another record */
     }
 
+    if (rl->funcs->post_process_record && !rl->funcs->post_process_record(rl, rr)) {
+        /* RLAYERfatal already called */
+        return OSSL_RECORD_RETURN_FATAL;
+    }
+
     rl->num_recs = 1;
     return OSSL_RECORD_RETURN_SUCCESS;
 }
@@ -666,6 +672,9 @@ dtls_new_record_layer(OSSL_LIB_CTX *libctx, const char *propq, int vers,
     case DTLS_ANY_VERSION:
         (*retrl)->funcs = &dtls_any_funcs;
         break;
+    case DTLS1_3_VERSION:
+        (*retrl)->funcs = &dtls_1_3_funcs;
+        break;
     case DTLS1_2_VERSION:
     case DTLS1_VERSION:
     case DTLS1_BAD_VER:
@@ -704,16 +713,21 @@ int dtls_prepare_record_header(OSSL_RECORD_LAYER *rl,
     if (rl->compctx != NULL)
         maxcomplen += SSL3_RT_MAX_COMPRESSED_OVERHEAD;
 
-    if (!WPACKET_put_bytes_u8(thispkt, rectype)
-            || !WPACKET_put_bytes_u16(thispkt, templ->version)
-            || !WPACKET_put_bytes_u16(thispkt, rl->epoch)
-            || !WPACKET_memcpy(thispkt, &(rl->sequence[2]), 6)
-            || !WPACKET_start_sub_packet_u16(thispkt)
-            || (rl->eivlen > 0
-                && !WPACKET_allocate_bytes(thispkt, rl->eivlen, NULL))
-            || (maxcomplen > 0
-                && !WPACKET_reserve_bytes(thispkt, maxcomplen,
-                                          recdata))) {
+    if (!WPACKET_put_bytes_u8(thispkt, rectype)) {
+        RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+        return 0;
+    }
+
+    // FWH: TODO figure out how to handle variable length header
+    if (!WPACKET_put_bytes_u16(thispkt, templ->version)
+       || !WPACKET_put_bytes_u16(thispkt, rl->epoch)
+       || !WPACKET_memcpy(thispkt, &(rl->sequence[2]), 6)
+       || !WPACKET_start_sub_packet_u16(thispkt)
+       || (rl->eivlen > 0
+           && !WPACKET_allocate_bytes(thispkt, rl->eivlen, NULL))
+       || (maxcomplen > 0
+           && !WPACKET_reserve_bytes(thispkt, maxcomplen,recdata))
+    ) {
         RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
         return 0;
     }
@@ -783,7 +797,7 @@ const OSSL_RECORD_METHOD ossl_dtls_record_method = {
     tls_get_alert_code,
     tls_set1_bio,
     tls_set_protocol_version,
-    NULL,
+    tls_set_plain_alerts,
     tls_set_first_handshake,
     tls_set_max_pipelines,
     dtls_set_in_init,
