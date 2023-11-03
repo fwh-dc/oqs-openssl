@@ -703,7 +703,8 @@ int dtls_prepare_record_header(OSSL_RECORD_LAYER *rl,
                                WPACKET *thispkt,
                                OSSL_RECORD_TEMPLATE *templ,
                                unsigned int rectype,
-                               unsigned char **recdata)
+                               unsigned char **recdata,
+                               TLS_RL_RECORD *thiswr)
 {
     size_t maxcomplen;
 

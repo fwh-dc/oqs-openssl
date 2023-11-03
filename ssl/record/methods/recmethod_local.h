@@ -186,7 +186,8 @@ struct record_functions_st
     int (*prepare_record_header)(OSSL_RECORD_LAYER *rl, WPACKET *thispkt,
                                  OSSL_RECORD_TEMPLATE *templ,
                                  unsigned int rectype,
-                                 unsigned char **recdata);
+                                 unsigned char **recdata,
+                                 TLS_RL_RECORD *thiswr);
 
     int (*add_record_padding)(OSSL_RECORD_LAYER *rl,
                               OSSL_RECORD_TEMPLATE *thistempl,
@@ -433,7 +434,8 @@ int dtls_prepare_record_header(OSSL_RECORD_LAYER *rl,
                                WPACKET *thispkt,
                                OSSL_RECORD_TEMPLATE *templ,
                                unsigned int rectype,
-                               unsigned char **recdata);
+                               unsigned char **recdata,
+                               TLS_RL_RECORD *thiswr);
 int dtls_post_encryption_processing(OSSL_RECORD_LAYER *rl,
                                     size_t mac_size,
                                     OSSL_RECORD_TEMPLATE *thistempl,
@@ -522,7 +524,8 @@ int tls_prepare_record_header_default(OSSL_RECORD_LAYER *rl,
                                       WPACKET *thispkt,
                                       OSSL_RECORD_TEMPLATE *templ,
                                       unsigned int rectype,
-                                      unsigned char **recdata);
+                                      unsigned char **recdata,
+                                      TLS_RL_RECORD *thiswr);
 int tls_prepare_for_encryption_default(OSSL_RECORD_LAYER *rl,
                                        size_t mac_size,
                                        WPACKET *thispkt,

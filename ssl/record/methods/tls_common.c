@@ -1575,7 +1575,8 @@ int tls_prepare_record_header_default(OSSL_RECORD_LAYER *rl,
                                       WPACKET *thispkt,
                                       OSSL_RECORD_TEMPLATE *templ,
                                       unsigned int rectype,
-                                      unsigned char **recdata)
+                                      unsigned char **recdata,
+                                      TLS_RL_RECORD *thiswr)
 {
     size_t maxcomplen;
 
@@ -1774,7 +1775,7 @@ int tls_write_records_default(OSSL_RECORD_LAYER *rl,
         TLS_RL_RECORD_set_rec_version(thiswr, thistempl->version);
 
         if (!rl->funcs->prepare_record_header(rl, thispkt, thistempl, rectype,
-                                              &compressdata)) {
+                                              &compressdata, thiswr)) {
             /* RLAYERfatal() already called */
             goto err;
         }
