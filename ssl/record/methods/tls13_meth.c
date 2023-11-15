@@ -363,7 +363,7 @@ struct record_functions_st dtls_1_3_funcs = {
     tls_allocate_write_buffers_default,
     tls_initialise_write_packets_default,
     tls13_get_record_type, // (TODO) FWH: Seems like new stuff for TLS 1.3, check applicability for DTLS 1.3
-    dtls_prepare_record_header,
+    dtls13_prepare_record_header,
     tls13_add_record_padding, // (TODO) FWH: Seems like new stuff for TLS 1.3, check applicability for DTLS 1.3
     tls_prepare_for_encryption_default,
     dtls_post_encryption_processing,
