@@ -191,6 +191,7 @@ struct record_functions_st dtls_any_funcs = {
     NULL,
     dtls_prepare_record_header,
     NULL,
+    NULL,
     tls_prepare_for_encryption_default,
     dtls_post_encryption_processing,
     NULL

@@ -1774,10 +1774,21 @@ int tls_write_records_default(OSSL_RECORD_LAYER *rl,
         TLS_RL_RECORD_set_type(thiswr, rectype);
         TLS_RL_RECORD_set_rec_version(thiswr, thistempl->version);
 
-        if (!rl->funcs->prepare_record_header(rl, thispkt, thistempl, rectype,
-                                              &compressdata)) {
-            /* RLAYERfatal() already called */
-            goto err;
+        if (rl->funcs->prepare_unified_header != NULL
+                && rectype == SSL3_RT_APPLICATION_DATA) {
+            /* DTLS 1.3 DTLSCiphertext */
+            if (!rl->funcs->prepare_unified_header(rl, thispkt, thiswr, thistempl,
+                                                rectype, &compressdata)) {
+                /* RLAYERfatal() already called */
+                goto err;
+            }
+        } else {
+            if (!rl->funcs->prepare_record_header(rl, thispkt, thistempl, rectype,
+                                                &compressdata)) {
+                /* RLAYERfatal() already called */
+                goto err;
+            }
+            thiswr->unified_hdr.valid = 0;
         }
 
         /* lets setup the record stuff. */

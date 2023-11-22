@@ -655,6 +655,7 @@ struct record_functions_st tls_1_funcs = {
     NULL,
     tls_prepare_record_header_default,
     NULL,
+    NULL,
     tls_prepare_for_encryption_default,
     tls_post_encryption_processing_default,
     NULL
@@ -681,6 +682,7 @@ struct record_functions_st dtls_1_funcs = {
     tls_initialise_write_packets_default,
     NULL,
     dtls_prepare_record_header,
+    NULL,
     NULL,
     tls_prepare_for_encryption_default,
     dtls_post_encryption_processing,

@@ -577,6 +577,7 @@ static struct record_functions_st ossl_ktls_funcs = {
     NULL,
     ktls_prepare_record_header,
     NULL,
+    NULL,
     ktls_prepare_for_encryption,
     ktls_post_encryption_processing,
     ktls_prepare_write_bio

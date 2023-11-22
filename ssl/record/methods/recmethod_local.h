@@ -188,6 +188,13 @@ struct record_functions_st
                                  uint8_t rectype,
                                  unsigned char **recdata);
 
+    /* Write the unified header data to the WPACKET */
+    int (*prepare_unified_header)(OSSL_RECORD_LAYER *rl, WPACKET *thispkt,
+                                 TLS_RL_RECORD *thiswr,
+                                 OSSL_RECORD_TEMPLATE *templ,
+                                 unsigned int rectype,
+                                 unsigned char **recdata);
+
     int (*add_record_padding)(OSSL_RECORD_LAYER *rl,
                               OSSL_RECORD_TEMPLATE *thistempl,
                               WPACKET *thispkt,
@@ -431,6 +438,12 @@ int dtls_prepare_record_header(OSSL_RECORD_LAYER *rl,
                                WPACKET *thispkt,
                                OSSL_RECORD_TEMPLATE *templ,
                                uint8_t rectype,
+                               unsigned char **recdata);
+int dtls13_prepare_unified_header(OSSL_RECORD_LAYER *rl,
+                               WPACKET *thispkt,
+                               TLS_RL_RECORD *thiswr,
+                               OSSL_RECORD_TEMPLATE *templ,
+                               unsigned int rectype,
                                unsigned char **recdata);
 int dtls_post_encryption_processing(OSSL_RECORD_LAYER *rl,
                                     size_t mac_size,
