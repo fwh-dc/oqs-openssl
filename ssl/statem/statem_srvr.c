@@ -2386,7 +2386,7 @@ CON_FUNC_RETURN tls_construct_server_hello(SSL_CONNECTION *s, WPACKET *pkt)
                        && s->hello_retry_request == SSL_HRR_PENDING);
     int usedtls13 = SSL_CONNECTION_IS_DTLS13(s)
                     || (SSL_CONNECTION_IS_DTLS(s)
-                        && s->hello_retry_request == SSL_HRR_PENDING;
+                        && s->hello_retry_request == SSL_HRR_PENDING);
 
     version = usetls13 ? TLS1_2_VERSION : (usedtls13 ? DTLS1_2_VERSION : s->version);
     if (!WPACKET_put_bytes_u16(pkt, version)
