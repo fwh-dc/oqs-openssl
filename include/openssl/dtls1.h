@@ -51,6 +51,13 @@ extern "C" {
 
 # define DTLS1_TMO_ALERT_COUNT                     12
 
+/* DTLS 1.3 unified header */
+#define DTLS13_CBIT                      0x10
+#define DTLS13_SBIT                      0x08
+#define DTLS13_LBIT                      0x04
+#define DTLS13_FIXED_BITS                0x20
+#define DTLS13_EPOCH_MASK                0x03
+
 #ifdef  __cplusplus
 }
 #endif
