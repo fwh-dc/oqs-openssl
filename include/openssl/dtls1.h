@@ -42,6 +42,10 @@ extern "C" {
 
 # define DTLS1_HM_HEADER_LENGTH                  12
 
+/* DTLSv1.3: Statically fixed to 5 bytes (first byte, 16-bit Sequence ID
+and 16-bit Length field).*/
+# define DTLS13_UNIFIED_HEADER_LENGTH            5
+
 # define DTLS1_HM_BAD_FRAGMENT                   -2
 # define DTLS1_HM_FRAGMENT_RETRY                 -3
 

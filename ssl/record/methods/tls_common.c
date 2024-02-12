@@ -150,13 +150,16 @@ int tls_setup_write_buffer(OSSL_RECORD_LAYER *rl, size_t numwpipes,
     size_t contenttypelen = 0;
 
     if (firstlen == 0 || (numwpipes > 1 && nextlen == 0)) {
-        if (rl->isdtls)
-            headerlen = DTLS1_RT_HEADER_LENGTH + 1;
-        else
+        if (rl->isdtls) {
+            if (rl->version == DTLS1_3_VERSION)
+                headerlen = DTLS13_UNIFIED_HEADER_LENGTH;
+            else
+                headerlen = DTLS1_RT_HEADER_LENGTH + 1;
+        } else
             headerlen = SSL3_RT_HEADER_LENGTH;
 
         /* TLSv1.3 adds an extra content type byte after payload data */
-        if (rl->version == TLS1_3_VERSION)
+        if (rl->version == TLS1_3_VERSION || rl->version == DTLS1_3_VERSION)
             contenttypelen = 1;
 
 #if defined(SSL3_ALIGN_PAYLOAD) && SSL3_ALIGN_PAYLOAD != 0
@@ -1557,7 +1560,13 @@ int tls_initialise_write_packets_default(OSSL_RECORD_LAYER *rl,
 
 #if defined(SSL3_ALIGN_PAYLOAD) && SSL3_ALIGN_PAYLOAD != 0
         align = (size_t)TLS_BUFFER_get_buf(wb);
-        align += rl->isdtls ? DTLS1_RT_HEADER_LENGTH : SSL3_RT_HEADER_LENGTH;
+        if (rl->isdtls) {
+            if (rl->version == DTLS1_3_VERSION)
+                align += DTLS13_UNIFIED_HEADER_LENGTH;
+            else
+                align += DTLS1_RT_HEADER_LENGTH;
+        } else
+            align += SSL3_RT_HEADER_LENGTH;
         align = SSL3_ALIGN_PAYLOAD - 1
                 - ((align - 1) % SSL3_ALIGN_PAYLOAD);
 #endif
