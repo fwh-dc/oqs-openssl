@@ -60,6 +60,8 @@ static int tls13_cipher(OSSL_RECORD_LAYER *rl, TLS_RL_RECORD *recs,
                         size_t macsize)
 {
     EVP_CIPHER_CTX *ctx;
+    /* Header length for both TLS1.3 and our DTLS1.3 implementation is 5 bytes,
+    matching SSL3_RT_HEADER_LENGTH. Future DTLS1.3 may need adjustments. */
     unsigned char iv[EVP_MAX_IV_LENGTH], recheader[SSL3_RT_HEADER_LENGTH];
     size_t ivlen, offset, loop, hdrlen;
     unsigned char *staticiv;
@@ -135,16 +137,43 @@ static int tls13_cipher(OSSL_RECORD_LAYER *rl, TLS_RL_RECORD *recs,
     }
 
     /* Set up the AAD */
-    if (!WPACKET_init_static_len(&wpkt, recheader, sizeof(recheader), 0)
-            || !WPACKET_put_bytes_u8(&wpkt, rec->type)
-            || !WPACKET_put_bytes_u16(&wpkt, rec->rec_version)
-            || !WPACKET_put_bytes_u16(&wpkt, rec->length + rl->taglen)
-            || !WPACKET_get_total_written(&wpkt, &hdrlen)
-            || hdrlen != SSL3_RT_HEADER_LENGTH
-            || !WPACKET_finish(&wpkt)) {
-        RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
-        WPACKET_cleanup(&wpkt);
-        return 0;
+    if (rl->isdtls) {
+        /* DTLSv1.3 Ciphertext record: 
+        Statically forced to use no CID, 16-bit Sequence ID and 16-bit Length.*/
+        unsigned char first_byte = DTLS13_FIXED_BITS;
+        first_byte |= DTLS13_SBIT | DTLS13_LBIT;
+        first_byte |= (rl->epoch & DTLS13_EPOCH_MASK);
+
+        if (!WPACKET_init_static_len(&wpkt, recheader, sizeof(recheader), 0)
+                || !WPACKET_put_bytes_u8(&wpkt, first_byte)
+                || !WPACKET_put_bytes_u8(&wpkt, rl->sequence[SEQ_NUM_SIZE - 2])
+                || !((first_byte & DTLS13_SBIT)
+                      ? WPACKET_put_bytes_u8(&wpkt,
+                                             rl->sequence[SEQ_NUM_SIZE - 1])
+                      : 1)
+                || !((first_byte & DTLS13_LBIT)
+                      ? WPACKET_put_bytes_u16(&wpkt, rec->length)
+                      : 1)
+                || !WPACKET_get_total_written(&wpkt, &hdrlen)
+                || hdrlen != DTLS13_UNIFIED_HEADER_LENGTH
+                || !WPACKET_finish(&wpkt)) {
+            RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            WPACKET_cleanup(&wpkt);
+            return 0;
+        }
+    } else {
+        //TLSCiphertext record
+        if (!WPACKET_init_static_len(&wpkt, recheader, sizeof(recheader), 0)
+                || !WPACKET_put_bytes_u8(&wpkt, rec->type)
+                || !WPACKET_put_bytes_u16(&wpkt, rec->rec_version)
+                || !WPACKET_put_bytes_u16(&wpkt, rec->length + rl->taglen)
+                || !WPACKET_get_total_written(&wpkt, &hdrlen)
+                || hdrlen != SSL3_RT_HEADER_LENGTH
+                || !WPACKET_finish(&wpkt)) {
+            RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            WPACKET_cleanup(&wpkt);
+            return 0;
+        }
     }
 
     /*
@@ -338,7 +367,7 @@ struct record_functions_st dtls_1_3_funcs = {
     tls_allocate_write_buffers_default,
     tls_initialise_write_packets_default,
     tls13_get_record_type,
-    dtls_prepare_record_header,
+    dtls13_prepare_record_header,
     tls13_add_record_padding,
     tls_prepare_for_encryption_default,
     dtls_post_encryption_processing,

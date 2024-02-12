@@ -42,6 +42,10 @@ extern "C" {
 
 # define DTLS1_HM_HEADER_LENGTH                  12
 
+/* DTLSv1.3: Statically fixed to 5 bytes (first byte, 16-bit Sequence ID
+and 16-bit Length field).*/
+# define DTLS13_UNIFIED_HEADER_LENGTH            5
+
 # define DTLS1_HM_BAD_FRAGMENT                   -2
 # define DTLS1_HM_FRAGMENT_RETRY                 -3
 
@@ -50,6 +54,13 @@ extern "C" {
 # define DTLS1_AL_HEADER_LENGTH                   2
 
 # define DTLS1_TMO_ALERT_COUNT                     12
+
+/* DTLS 1.3 unified header */
+#define DTLS13_CBIT                      0x10
+#define DTLS13_SBIT                      0x08
+#define DTLS13_LBIT                      0x04
+#define DTLS13_FIXED_BITS                0x20
+#define DTLS13_EPOCH_MASK                0x03
 
 #ifdef  __cplusplus
 }
