@@ -314,13 +314,15 @@ int dtls1_read_bytes(SSL *s, uint8_t type, uint8_t *recvd_type,
     }
 
     if (type == rr->type
-        || (rr->type == SSL3_RT_CHANGE_CIPHER_SPEC
-            && type == SSL3_RT_HANDSHAKE && recvd_type != NULL
-            && !is_dtls13)) {
+            || (rr->type == SSL3_RT_CHANGE_CIPHER_SPEC
+                && type == SSL3_RT_HANDSHAKE && recvd_type != NULL
+                && !is_dtls13)
+            || (is_dtls13 && rr->type == SSL3_RT_ACK)) {
         /*
          * SSL3_RT_APPLICATION_DATA or
          * SSL3_RT_HANDSHAKE or
-         * SSL3_RT_CHANGE_CIPHER_SPEC
+         * SSL3_RT_CHANGE_CIPHER_SPEC or
+         * SSL3_RT_ACK
          */
         /*
          * make sure that we are not getting application data when we are
