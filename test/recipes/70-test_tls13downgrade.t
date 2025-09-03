@@ -34,7 +34,7 @@ use constant {
     DOWNGRADE_TO_TLS_1_1_WITH_TLS_1_2_SIGNAL => 4,
 };
 
-my $testcount = 6;
+my $testcount = 8;
 plan tests => 2 * $testcount;
 
 my $testtype;
@@ -101,39 +101,39 @@ sub run_tests
     $proxy->start();
     ok(is_illegal_parameter_client_alert(), "Fallback from ".$proto1_3);
 
-    SKIP: {
-    skip "TLSv1.1 disabled", 3 if (disabled("tls1_1") && !$run_test_as_dtls)
-        || (disabled("dtls1_1") && $run_test_as_dtls);
-
     my $client_flags = "-min_protocol " . $proto1_1 . " -cipher DEFAULT:\@SECLEVEL=0";
     my $server_flags = "-min_protocol " . $proto1_1;
     my $ciphers = "AES128-SHA:\@SECLEVEL=0";
 
-    #Test 4: Downgrade from (D)TLSv1.3 to (D)TLSv1.1
-    $proxy->clear();
-    $testtype = DOWNGRADE_TO_TLS_1_1;
-    $proxy->clientflags($client_flags);
-    $proxy->serverflags($server_flags);
-    $proxy->ciphers($ciphers);
-    $proxy->start();
-    ok(is_illegal_parameter_client_alert(), "Downgrade " . $proto1_3 . " to " . $proto1_1);
+    SKIP: {
+        skip "TLSv1.1 disabled", 3 if (disabled("tls1_1") && !$run_test_as_dtls)
+            || (disabled("dtls1_1") && $run_test_as_dtls);
 
-    skip "Missing support for no_dtls1_2", 2 if $run_test_as_dtls == 1;
-    #Test 5: Downgrade from TLSv1.3 to TLSv1.1 (server sends TLSv1.2 signal)
-    $proxy->clear();
-    $testtype = DOWNGRADE_TO_TLS_1_1_WITH_TLS_1_2_SIGNAL;
-    $proxy->clientflags($client_flags);
-    $proxy->serverflags($server_flags);
-    $proxy->ciphers($ciphers);
-    $proxy->start();
-    ok(is_illegal_parameter_client_alert(),
-        "Downgrade " . $proto1_3 . " to " . $proto1_1 . " (server sends " . $proto1_2 . " signal)");
+        #Test 4: Downgrade from (D)TLSv1.3 to (D)TLSv1.1
+        $proxy->clear();
+        $testtype = DOWNGRADE_TO_TLS_1_1;
+        $proxy->clientflags($client_flags);
+        $proxy->serverflags($server_flags);
+        $proxy->ciphers($ciphers);
+        $proxy->start();
+        ok(is_illegal_parameter_client_alert(), "Downgrade " . $proto1_3 . " to " . $proto1_1);
 
-    #Test 6: Downgrade from TLSv1.2 to TLSv1.1
-    $proxy->clear();
-    $testtype = DOWNGRADE_TO_TLS_1_1;
-    $proxy->clientflags($client_flags . " -max_protocol " . $proto1_2);
-    $proxy->serverflags($server_flags . " -max_protocol ".$proto1_2);
+        skip "Missing support for no_dtls1_2", 2 if $run_test_as_dtls == 1;
+        #Test 5: Downgrade from TLSv1.3 to TLSv1.1 (server sends TLSv1.2 signal)
+        $proxy->clear();
+        $testtype = DOWNGRADE_TO_TLS_1_1_WITH_TLS_1_2_SIGNAL;
+        $proxy->clientflags($client_flags);
+        $proxy->serverflags($server_flags);
+        $proxy->ciphers($ciphers);
+        $proxy->start();
+        ok(is_illegal_parameter_client_alert(),
+            "Downgrade " . $proto1_3 . " to " . $proto1_1 . " (server sends " . $proto1_2 . " signal)");
+
+        #Test 6: Downgrade from TLSv1.2 to TLSv1.1
+        $proxy->clear();
+        $testtype = DOWNGRADE_TO_TLS_1_1;
+        $proxy->clientflags($client_flags . " -max_protocol " . $proto1_2);
+        $proxy->serverflags($server_flags . " -max_protocol ".$proto1_2);
         $proxy->ciphers($ciphers);
         $proxy->start();
         ok(is_illegal_parameter_client_alert(), "Downgrade ".$proto1_2." to ".$proto1_1);
