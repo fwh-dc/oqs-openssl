@@ -341,6 +341,7 @@ sub run_tests
         skip "DTLS only record tests", 1 if $run_test_as_dtls != 1;
         #Test 22: We should ignore empty app data records
         $proxy->clear();
+        $proxy->clientflags("-groups ?X25519:?P-256")
         $proxy->filter(\&empty_app_data);
         $proxy->start();
         ok(TLSProxy::Message->success(), "Empty app data in DTLS");

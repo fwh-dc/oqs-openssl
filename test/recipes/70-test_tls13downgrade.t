@@ -77,32 +77,46 @@ sub run_tests
         );
     }
 
-    #Test 1: Downgrade from (D)TLSv1.3 to (D)TLSv1.2
-    $proxy->clear();
-    $proxy->filter(\&downgrade_filter);
-    $testtype = DOWNGRADE_TO_TLS_1_2;
-    skip "Unable to start up Proxy for tests", $testcount if !$proxy->start() &&
-                                                             !TLSProxy::Message->fail();
-    ok(TLSProxy::Message->fail(), "Downgrade ".$proto1_3." to ".$proto1_2);
+    SKIP: {
+        skip "Skipping tests for DTLS", 2 if ($run_test_as_dtls == 1);
+        #TODO(DTLS-1.3): These tests must be updated to support DTLS.
+
+        #Test 1: Downgrade from (D)TLSv1.3 to (D)TLSv1.2
+        $proxy->clear();
+        $proxy->filter(\&downgrade_filter);
+        $testtype = DOWNGRADE_TO_TLS_1_2;
+        skip "Unable to start up Proxy for tests", $testcount if !$proxy->start() &&
+            !TLSProxy::Message->fail();
+        ok(TLSProxy::Message->fail(), "Downgrade ".$proto1_3." to ".$proto1_2);
 
 
-    #Test 2: Downgrade from (D)TLSv1.3 to (D)TLSv1.2 (server sends (D)TLSv1.1 signal)
-    $proxy->clear();
-    $testtype = DOWNGRADE_TO_TLS_1_2_WITH_TLS_1_1_SIGNAL;
-    $proxy->start();
-    ok(is_illegal_parameter_client_alert(),
-        "Downgrade from ".$proto1_3." to ".$proto1_2." (server sends ".$proto1_1." signal)");
+        #Test 2: Downgrade from (D)TLSv1.3 to (D)TLSv1.2 (server sends (D)TLSv1.1 signal)
+        $proxy->clear();
+        $testtype = DOWNGRADE_TO_TLS_1_2_WITH_TLS_1_1_SIGNAL;
+        $proxy->start();
+        ok(is_illegal_parameter_client_alert(),
+            "Downgrade from ".$proto1_3." to ".$proto1_2." (server sends ".$proto1_1." signal)");
+    }
 
     #Test 3: Client falls back from (D)TLSv1.3 (server does not support the
     #        fallback SCSV)
     $proxy->clear();
     $testtype = FALLBACK_FROM_TLS_1_3;
-    $proxy->clientflags("-fallback_scsv -max_protocol ".$proto1_2);
+    my $client_flags = "-fallback_scsv -max_protocol ".$proto1_2;
+    if ($run_test_as_dtls == 1) {
+        # TLSProxy does not handle partial messages for DTLS.
+        $client_flags = $client_flags." -groups ?X25519:?P-256";
+    }
+    $proxy->clientflags($client_flags);
     $proxy->start();
     ok(is_illegal_parameter_client_alert(), "Fallback from ".$proto1_3);
 
-    my $client_flags = "-min_protocol " . $proto1_1 . " -cipher DEFAULT:\@SECLEVEL=0";
-    my $server_flags = "-min_protocol " . $proto1_1;
+    $client_flags = "-min_protocol ".$proto1_1." -cipher DEFAULT:\@SECLEVEL=0";
+    if ($run_test_as_dtls == 1) {
+        # TLSProxy does not handle partial messages for DTLS.
+        $client_flags = $client_flags." -groups ?X25519:?P-256";
+    }
+    my $server_flags = "-min_protocol ".$proto1_1;
     my $ciphers = "AES128-SHA:\@SECLEVEL=0";
 
     SKIP: {
@@ -127,13 +141,13 @@ sub run_tests
         $proxy->ciphers($ciphers);
         $proxy->start();
         ok(is_illegal_parameter_client_alert(),
-            "Downgrade " . $proto1_3 . " to " . $proto1_1 . " (server sends " . $proto1_2 . " signal)");
+            "Downgrade ".$proto1_3." to ".$proto1_1." (server sends ".$proto1_2." signal)");
 
         #Test 6: Downgrade from TLSv1.2 to TLSv1.1
         $proxy->clear();
         $testtype = DOWNGRADE_TO_TLS_1_1;
-        $proxy->clientflags($client_flags . " -max_protocol " . $proto1_2);
-        $proxy->serverflags($server_flags . " -max_protocol ".$proto1_2);
+        $proxy->clientflags($client_flags." -max_protocol ".$proto1_2);
+        $proxy->serverflags($server_flags." -max_protocol ".$proto1_2);
         $proxy->ciphers($ciphers);
         $proxy->start();
         ok(is_illegal_parameter_client_alert(), "Downgrade ".$proto1_2." to ".$proto1_1);
