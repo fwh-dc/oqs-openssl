@@ -52,8 +52,7 @@ void ossl_ec_GF2m_simple_group_finish(EC_GROUP *group)
 }
 
 /*
- * Clear and free a GF(2^m)-based EC_GROUP structure. Note that all other
- * members are handled by EC_GROUP_clear_free.
+ * Clear and free a GF(2^m)-based EC_GROUP structure.
  */
 void ossl_ec_GF2m_simple_group_clear_finish(EC_GROUP *group)
 {

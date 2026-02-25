@@ -158,6 +158,30 @@ This includes consulting the L<ossl-guide-migration(7)> documentation.
 
 =item BIO_f_reliable (Broken since 3.0.0) - removed without replacement
 
+=item EC_GFp_mont_method (Deprecated in 3.0.0)
+
+=item EC_GFp_nist_method (Deprecated in 3.0.0)
+
+=item EC_GFp_nistp224_method (Deprecated in 3.0.0)
+
+=item EC_GFp_nistp256_method (Deprecated in 3.0.0)
+
+=item EC_GFp_nistp521_method (Deprecated in 3.0.0)
+
+=item EC_GFp_simple_method (Deprecated in 3.0.0)
+
+=item EC_GF2m_simple_method (Deprecated in 3.0.0)
+
+=item EC_GROUP_clear_free (Deprecated in 3.0.0)
+
+=item EC_GROUP_method_of (Deprecated in 3.0.0)
+
+=item EC_GROUP_new (Deprecated in 3.0.0)
+
+=item EC_POINT_method_of (Deprecated in 3.0.0)
+
+=item EC_METHOD_get_field_type (Deprecated in 3.0.0)
+
 =item ERR_get_state (Deprecated in 3.0.0) - removed, no use with opaque ERR_STATE
 
 =item ERR_remove_state (Deprecated in 1.0.0) - removed, no-op

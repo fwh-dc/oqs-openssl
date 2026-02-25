@@ -56,6 +56,21 @@ is no longer useful. It always returns NULL, so should simply be removed from
 applications that call it. Applications wishing to use a custom digest
 implementation should instead use the provider API.
 
+=head3 Removal of EC_METHOD_get_field_type()
+
+EC_METHOD_get_field_type() was deprecated in OpenSSL 3.0 and removed in 4.0.
+Applications should use EC_GROUP_get_field_type() as a replacement (see L<EC_GROUP_copy(3)>).
+
+=head3 Removal of EC_GROUP_clear_free()
+
+EC_GROUP_clear_free() was deprecated in OpenSSL 3.0. Migrating applications should use
+EC_GROUP_free() instead.
+
+=head3 Removal of EC_GROUP_new()
+
+EC_GROUP_new() was deprecated in OpenSSL 3.0 migrating applications should
+use one of the other EC_GROUP_new_* constructors instead.
+
 =head1 OPENSSL 3.6
 
 =head2 Main Changes from OpenSSL 3.5

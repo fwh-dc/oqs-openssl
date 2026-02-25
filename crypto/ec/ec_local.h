@@ -43,10 +43,9 @@ typedef struct ec_method_st EC_METHOD;
 struct ec_method_st {
     /* Various method flags */
     int flags;
-    /* used by EC_METHOD_get_field_type: */
     int field_type; /* a NID */
     /*
-     * used by EC_GROUP_new, EC_GROUP_free, EC_GROUP_clear_free,
+     * used by EC_GROUP_new, EC_GROUP_free,
      * EC_GROUP_copy:
      */
     int (*group_init)(EC_GROUP *);
@@ -198,6 +197,8 @@ struct ec_method_st {
         EC_POINT *p, BN_CTX *ctx);
     int (*group_full_init)(EC_GROUP *group, const unsigned char *data);
 };
+
+typedef struct ec_method_st EC_METHOD;
 
 /*
  * Types and functions to manipulate pre-computed values.
@@ -513,6 +514,65 @@ int ossl_ec_GF2m_simple_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
     BN_CTX *);
 int ossl_ec_GF2m_simple_field_div(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
     const BIGNUM *b, BN_CTX *);
+/********************************************************************/
+/*                   EC_GROUP functions                             */
+/********************************************************************/
+
+/**
+ *  Creates a new EC_GROUP object
+ *  \param   meth   EC_METHOD to use
+ *  \return  newly created EC_GROUP object or NULL in case of an error.
+ */
+EC_GROUP *EC_GROUP_new(const EC_METHOD *meth);
+
+/********************************************************************/
+/*               EC_METHODs for curves over GF(p)                   */
+/********************************************************************/
+
+/** Returns the basic GFp ec methods which provides the basis for the
+ *  optimized methods.
+ *  \return  EC_METHOD object
+ */
+const EC_METHOD *EC_GFp_simple_method(void);
+
+
+/** Returns GFp methods using montgomery multiplication.
+ *  \return  EC_METHOD object
+ */
+const EC_METHOD *EC_GFp_mont_method(void);
+
+/** Returns GFp methods using optimized methods for NIST recommended curves
+ *  \return  EC_METHOD object
+ */
+const EC_METHOD *EC_GFp_nist_method(void);
+
+#ifndef OPENSSL_NO_EC_NISTP_64_GCC_128
+/** Returns 64-bit optimized methods for nistp224
+ *  \return  EC_METHOD object
+ */
+const EC_METHOD *EC_GFp_nistp224_method(void);
+
+/** Returns 64-bit optimized methods for nistp256
+ *  \return  EC_METHOD object
+ */
+const EC_METHOD *EC_GFp_nistp256_method(void);
+
+/** Returns 64-bit optimized methods for nistp521
+ *  \return  EC_METHOD object
+ */
+const EC_METHOD *EC_GFp_nistp521_method(void);
+#endif /* OPENSSL_NO_EC_NISTP_64_GCC_128 */
+
+#ifndef OPENSSL_NO_EC2M
+/********************************************************************/
+/*           EC_METHOD for curves over GF(2^m)                      */
+/********************************************************************/
+
+/** Returns the basic GF2m ec method
+ *  \return  EC_METHOD object
+ */
+const EC_METHOD *EC_GF2m_simple_method(void);
+#endif
 
 #ifndef OPENSSL_NO_EC_NISTP_64_GCC_128
 #ifdef B_ENDIAN

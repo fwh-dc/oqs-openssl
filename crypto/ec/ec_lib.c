@@ -74,13 +74,11 @@ err:
     return NULL;
 }
 
-#ifndef OPENSSL_NO_DEPRECATED_3_0
 #ifndef FIPS_MODULE
 EC_GROUP *EC_GROUP_new(const EC_METHOD *meth)
 {
     return ossl_ec_group_new_ex(NULL, NULL, meth);
 }
-#endif
 #endif
 
 void EC_pre_comp_free(EC_GROUP *group)
@@ -137,27 +135,6 @@ void EC_GROUP_free(EC_GROUP *group)
     OPENSSL_free(group->propq);
     OPENSSL_free(group);
 }
-
-#ifndef OPENSSL_NO_DEPRECATED_3_0
-void EC_GROUP_clear_free(EC_GROUP *group)
-{
-    if (!group)
-        return;
-
-    if (group->meth->group_clear_finish != 0)
-        group->meth->group_clear_finish(group);
-    else if (group->meth->group_finish != 0)
-        group->meth->group_finish(group);
-
-    EC_pre_comp_free(group);
-    BN_MONT_CTX_free(group->mont_data);
-    EC_POINT_clear_free(group->generator);
-    BN_clear_free(group->order);
-    BN_clear_free(group->cofactor);
-    OPENSSL_clear_free(group->seed, group->seed_len);
-    OPENSSL_clear_free(group, sizeof(*group));
-}
-#endif
 
 int EC_GROUP_copy(EC_GROUP *dest, const EC_GROUP *src)
 {
@@ -288,18 +265,6 @@ err:
     }
     return t;
 }
-
-#ifndef OPENSSL_NO_DEPRECATED_3_0
-const EC_METHOD *EC_GROUP_method_of(const EC_GROUP *group)
-{
-    return group->meth;
-}
-
-int EC_METHOD_get_field_type(const EC_METHOD *meth)
-{
-    return meth->field_type;
-}
-#endif
 
 static int ec_precompute_mont_data(EC_GROUP *);
 
@@ -827,13 +792,6 @@ EC_POINT *EC_POINT_dup(const EC_POINT *a, const EC_GROUP *group)
     }
     return t;
 }
-
-#ifndef OPENSSL_NO_DEPRECATED_3_0
-const EC_METHOD *EC_POINT_method_of(const EC_POINT *point)
-{
-    return point->meth;
-}
-#endif
 
 int EC_POINT_set_to_infinity(const EC_GROUP *group, EC_POINT *point)
 {
