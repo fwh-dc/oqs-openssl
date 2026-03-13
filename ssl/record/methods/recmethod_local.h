@@ -347,8 +347,7 @@ struct ossl_record_layer_st
     /* TLSv1.3 fields */
     /* static IV */
     unsigned char iv[EVP_MAX_IV_LENGTH];
-    /* static read IV */
-    unsigned char read_iv[EVP_MAX_IV_LENGTH];
+
     int allow_plain_alerts;
 
     /* TLS "any" fields */
